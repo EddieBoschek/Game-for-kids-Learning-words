@@ -9,6 +9,7 @@ import java.util.List;
 public class GameGUI extends JFrame {
     private List<JButton> answerButtons;
     private JButton questionButton = new JButton();
+    private JButton stopStartButton = new JButton("Stop");
     private GameLogic gameLogic;
     private List<JPanel> squarePanels;
     private Question question;
@@ -48,16 +49,22 @@ public class GameGUI extends JFrame {
 
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.setBackground(getBackgroundColor());
-        scoreSquares(topPanel,level, questionNumber);
+
+        JLabel label = new JLabel("   •   Nivå " + level + " av 3   •   Fråga " + questionNumber + " av 3   •");
+        label.setBackground(getBackgroundColor());
+        topPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
+        topPanel.add(label, BorderLayout.NORTH);
 
         mainPanel.add(topPanel, BorderLayout.NORTH);
         topPanel.setBackground(getBackgroundColor());
 
         JPanel midPanel = new JPanel(new GridLayout(2,0));
-        JPanel questionsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        JPanel questionsPanel = new JPanel(new GridLayout(1, 3));
+        JPanel emptyPanel = new JPanel();
         JPanel answerPanel = new JPanel(new GridBagLayout());
 
         questionsPanel.setBackground(getBackgroundColor());
+        emptyPanel.setBackground(getBackgroundColor());
         answerPanel.setBackground(getBackgroundColor());
 
         questionsPanel.setPreferredSize(new Dimension(250,250));
@@ -67,7 +74,13 @@ public class GameGUI extends JFrame {
 
         questionButton.setIcon(question.getQuestion());
         questionButton.setPreferredSize(new Dimension(300, 300));
-        questionsPanel.add(questionButton);
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setBackground(getBackgroundColor());
+        buttonPanel.add(questionButton);
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        questionsPanel.add(emptyPanel);
+        questionsPanel.add(buttonPanel);
+        scoreSquares(questionsPanel);
 
         GridBagConstraints constraints = new GridBagConstraints();
         constraints.insets = new Insets(10, 10, 10, 10);
@@ -86,10 +99,13 @@ public class GameGUI extends JFrame {
 
         midPanel.add(questionsPanel, BorderLayout.NORTH);
         midPanel.add(answerPanel, BorderLayout.CENTER);
+        //midPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
-        JPanel bottomPanel = new JPanel(new FlowLayout());
-        bottomPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 50, 0));
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        //bottomPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
         bottomPanel.setBackground(getBackgroundColor());
+        stopStartButton.setPreferredSize(new Dimension(60, 60));
+        bottomPanel.add(stopStartButton);
         mainPanel.add(bottomPanel, BorderLayout.SOUTH);
         setupGUIListeners();
 
@@ -107,18 +123,11 @@ public class GameGUI extends JFrame {
             });
         }
     }
-    public void scoreSquares(JPanel topPanel, int level, int questionNumber) {
+    public void scoreSquares(JPanel questionPanel) {
         int squareSize = 50;
         int numberOfSquares = 3;
 
         squarePanels = new ArrayList<>();
-
-        topPanel.setLayout(new BorderLayout());
-        topPanel.setBackground(getBackgroundColor());
-
-        JLabel label = new JLabel("   •   Nivå " + level + " av 3   •   Fråga " + questionNumber + " av 3   •");
-        label.setBackground(getBackgroundColor());
-        topPanel.add(label, BorderLayout.NORTH);
 
         JPanel scorePanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         scorePanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 50));
@@ -138,7 +147,7 @@ public class GameGUI extends JFrame {
             scorePanel.add(squarePanel);
             squarePanels.add(squarePanel);
         }
-        topPanel.add(scorePanel, BorderLayout.CENTER);
+        questionPanel.add(scorePanel, BorderLayout.EAST);
     }
 
     public void displayCorrectAnswer(int correctButtonIndex) {

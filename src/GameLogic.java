@@ -20,10 +20,6 @@ public class GameLogic {
 
     public GameLogic(GameGUI gameGUI) {
         this.gameGUI = gameGUI;
-        currentLevel = 1;
-        this.currentQuestion = 1;
-        this.correctAnswersInARow = 0;
-        roundResults = new boolean[3];
 
         newGame();
     }
@@ -31,13 +27,8 @@ public class GameLogic {
     public static boolean[] getRoundResults() {
         return roundResults;
     }
-
-    public void restartGame() {
-        currentQuestion = 1;
-        correctAnswersInARow = 0;
-        roundResults = new boolean[3];
-
-        SwingUtilities.invokeLater(this::startNewRound);
+    public static int getCurrentLevel() {
+        return currentLevel;
     }
 
     private void startNewRound() {
@@ -46,8 +37,7 @@ public class GameLogic {
             levelQuestions.shuffle();
             if (currentQuestion <= levelQuestions.getSize()) {
                 question = levelQuestions.getQuestion(currentQuestion);
-                System.out.println("Innan updateGUI 1");
-                pauseThread();
+                pauseAndUpdateGUI();
             } else {
                 currentLevel++;
                 moveToNextLevel();
@@ -57,11 +47,18 @@ public class GameLogic {
         }
     }
 
+    public void restartRound() {
+        currentQuestion = 1;
+        correctAnswersInARow = 0;
+        roundResults = new boolean[3];
+
+        SwingUtilities.invokeLater(this::startNewRound);
+    }
+
     public void moveToNextQuestion() {
         if (currentQuestion <= levelQuestions.getSize()) {
             question = levelQuestions.getQuestion(currentQuestion);
-            System.out.println("Innan updateGUI 2");
-            pauseThread();
+            pauseAndUpdateGUI();
         } else {
             currentLevel++;
             moveToNextLevel();
@@ -85,12 +82,10 @@ public class GameLogic {
 
             if (isCorrect) {
                 int correctButtonIndex = findAnswerButtonIndex(selectedAnswer);
-                gameGUI.displayCorrectAnswer(correctButtonIndex);
+                gameGUI.displayCorrectAnswer(-1, correctButtonIndex);
                 correctAnswersInARow++;
-                System.out.println("Correct answers in a row: " + correctAnswersInARow);
 
                 if (correctAnswersInARow == 3) {
-
                     currentLevel++;
                     SwingUtilities.invokeLater(() -> {
                         playSound("src/SoundFX/levelComplete.wav");
@@ -106,8 +101,8 @@ public class GameLogic {
                 int incorrectButtonIndex = findAnswerButtonIndex(selectedAnswer);
                 int correctButtonIndex = findAnswerButtonIndex(levelQuestions.getQuestion
                         (currentQuestion).getCorrectAnswer());
-                gameGUI.displayIncorrectAnswer(incorrectButtonIndex, correctButtonIndex);
-                restartGame();
+                gameGUI.displayCorrectAnswer(incorrectButtonIndex, correctButtonIndex);
+                restartRound();
             }
         }
     }
@@ -122,10 +117,6 @@ public class GameLogic {
             }
         }
         return -1;
-    }
-
-    public static int getCurrentLevel() {
-        return currentLevel;
     }
 
     public void playSound(String path) {
@@ -172,7 +163,7 @@ public class GameLogic {
         }
     }
 
-    private void pauseThread() {
+    private void pauseAndUpdateGUI() {
         backgroundThread = new Thread(() -> {
             try {
                 Thread.sleep(1300);
@@ -184,7 +175,7 @@ public class GameLogic {
                     try {
                         lock.wait();
                         try {
-                            Thread.sleep(1250);
+                            Thread.sleep(1100);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
@@ -192,18 +183,14 @@ public class GameLogic {
                         e.printStackTrace();
                     }
                 }
-                System.out.println("innan updateGUI 3");
                 SwingUtilities.invokeLater(() -> gameGUI.updateGUI(currentLevel, currentQuestion, question));
             }
         });
-        System.out.println("Thread start");
         backgroundThread.start();
     }
 
-    // När du vill fortsätta tråden
     public void resumeThread() {
         synchronized (lock) {
-            // Notify för att väcka tråden
             lock.notify();
         }
     }

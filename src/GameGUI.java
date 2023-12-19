@@ -18,15 +18,10 @@ public class GameGUI extends JFrame {
     Color customColor3 = new Color(151, 207, 255);
     Color customColor4 = new Color(255, 191, 255);
 
-    JFrame frame;
-
     public GameGUI() {
         setSize(1144, 800);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-        this.frame = this;
-        answerButtons = new ArrayList<>();
-
         setVisible(true);
     }
 
@@ -38,7 +33,6 @@ public class GameGUI extends JFrame {
     }
 
     public void updateGUI(int level, int questionNumber, Question question) {
-        System.out.println("Inne i updateGUI");
         this.question = question;
         answerButtons = new ArrayList<>();
         getContentPane().removeAll();
@@ -70,8 +64,9 @@ public class GameGUI extends JFrame {
         questionButton.setPreferredSize(new Dimension(300, 300));
         JPanel qButtonPanel = new JPanel();
         qButtonPanel.setBackground(getBackgroundColor());
-        qButtonPanel.add(questionButton);
         qButtonPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        qButtonPanel.add(questionButton);
+
         questionsPanel.add(emptyPanel);
         questionsPanel.add(qButtonPanel);
         scoreSquares(questionsPanel);
@@ -145,24 +140,22 @@ public class GameGUI extends JFrame {
         questionPanel.add(scorePanel, BorderLayout.EAST);
     }
 
-    public void displayCorrectAnswer(int correctButtonIndex) {
-        if (correctButtonIndex >= 0 && correctButtonIndex < answerButtons.size()) {
-            answerButtons.get(correctButtonIndex).setBackground(Color.GREEN);
-            SwingUtilities.invokeLater(() -> {
-                gameLogic.playSound("src/SoundFX/correctAnswer.wav");
-            });
-        }
-        updateSquareColors();
-    }
-
-    public void displayIncorrectAnswer(int incorrectButtonIndex, int correctButtonIndex) {
-
-        if (incorrectButtonIndex >= 0 && incorrectButtonIndex < answerButtons.size()) {
-            answerButtons.get(incorrectButtonIndex).setBackground(Color.RED);
-            answerButtons.get(correctButtonIndex).setBackground(Color.GREEN);
-            SwingUtilities.invokeLater(() -> {
-                gameLogic.playSound("src/SoundFX/wrongAnswer.wav");
-            });
+    public void displayCorrectAnswer(int incorrectButtonIndex, int correctButtonIndex) {
+        if (incorrectButtonIndex == -1) {
+            if (correctButtonIndex >= 0 && correctButtonIndex < answerButtons.size()) {
+                answerButtons.get(correctButtonIndex).setBackground(Color.GREEN);
+                SwingUtilities.invokeLater(() -> {
+                    gameLogic.playSound("src/SoundFX/correctAnswer.wav");
+                });
+            }
+        } else {
+            if (incorrectButtonIndex >= 0 && incorrectButtonIndex < answerButtons.size()) {
+                answerButtons.get(incorrectButtonIndex).setBackground(Color.RED);
+                answerButtons.get(correctButtonIndex).setBackground(Color.GREEN);
+                SwingUtilities.invokeLater(() -> {
+                    gameLogic.playSound("src/SoundFX/wrongAnswer.wav");
+                });
+            }
         }
         updateSquareColors();
     }
@@ -268,7 +261,6 @@ public class GameGUI extends JFrame {
             boolean isCorrect = temp[i];
 
             if (isCorrect) {
-
                 circlePanel.setBackground(Color.GREEN);
             } else {
                 circlePanel.setBackground(Color.RED);

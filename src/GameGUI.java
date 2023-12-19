@@ -9,9 +9,11 @@ import java.util.List;
 public class GameGUI extends JFrame {
     private List<JButton> answerButtons;
     private JButton questionButton = new JButton();
-    private JButton stopStartButton = new JButton("Stop");
-    private GameLogic gameLogic;
+    private JButton stopButton = new JButton("Stop");
+
     private List<JPanel> squarePanels;
+    boolean stopped = false;
+    private GameLogic gameLogic;
     private Question question;
     Color customColor1 = new Color(150, 255, 150);
     Color customColor2 = new Color(255, 231, 151);
@@ -44,19 +46,15 @@ public class GameGUI extends JFrame {
 
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BorderLayout());
-
         mainPanel.setBackground(getBackgroundColor());
 
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.setBackground(getBackgroundColor());
 
-        JLabel label = new JLabel("   •   Nivå " + level + " av 3   •   Fråga " + questionNumber + " av 3   •");
-        label.setBackground(getBackgroundColor());
+        JLabel infoLabel = new JLabel("   •   Nivå " + level + " av 3   •   Fråga " + questionNumber + " av 3   •");
+        infoLabel.setBackground(getBackgroundColor());
         topPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
-        topPanel.add(label, BorderLayout.NORTH);
-
-        mainPanel.add(topPanel, BorderLayout.NORTH);
-        topPanel.setBackground(getBackgroundColor());
+        topPanel.add(infoLabel, BorderLayout.NORTH);
 
         JPanel midPanel = new JPanel(new GridLayout(2,0));
         JPanel questionsPanel = new JPanel(new GridLayout(1, 3));
@@ -67,19 +65,16 @@ public class GameGUI extends JFrame {
         emptyPanel.setBackground(getBackgroundColor());
         answerPanel.setBackground(getBackgroundColor());
 
-        questionsPanel.setPreferredSize(new Dimension(250,250));
-        answerPanel.setPreferredSize(new Dimension(250,250));
-
         midPanel.setBackground(getBackgroundColor());
 
         questionButton.setIcon(question.getQuestion());
         questionButton.setPreferredSize(new Dimension(300, 300));
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setBackground(getBackgroundColor());
-        buttonPanel.add(questionButton);
-        buttonPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        JPanel qButtonPanel = new JPanel();
+        qButtonPanel.setBackground(getBackgroundColor());
+        qButtonPanel.add(questionButton);
+        qButtonPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         questionsPanel.add(emptyPanel);
-        questionsPanel.add(buttonPanel);
+        questionsPanel.add(qButtonPanel);
         scoreSquares(questionsPanel);
 
         GridBagConstraints constraints = new GridBagConstraints();
@@ -95,23 +90,24 @@ public class GameGUI extends JFrame {
             answerButtons.add(button);
         }
 
-        mainPanel.add(midPanel, BorderLayout.CENTER);
-
         midPanel.add(questionsPanel, BorderLayout.NORTH);
         midPanel.add(answerPanel, BorderLayout.CENTER);
-        //midPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        //bottomPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
         bottomPanel.setBackground(getBackgroundColor());
-        stopStartButton.setPreferredSize(new Dimension(60, 60));
-        bottomPanel.add(stopStartButton);
+        stopButton.setPreferredSize(new Dimension(60, 60));
+        bottomPanel.add(stopButton);
+
+        mainPanel.add(topPanel, BorderLayout.NORTH);
+        mainPanel.add(midPanel, BorderLayout.CENTER);
         mainPanel.add(bottomPanel, BorderLayout.SOUTH);
+
         setupGUIListeners();
 
         setContentPane(mainPanel);
         revalidate();
         repaint();
+
         if (level == 1) {
             SwingUtilities.invokeLater(() -> {
                 try {
@@ -261,6 +257,23 @@ public class GameGUI extends JFrame {
                 }
             });
         }
+        for (ActionListener listener : stopButton.getActionListeners()) {
+            stopButton.removeActionListener(listener);
+        }
+            stopButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    if (!stopped) {
+                        stopped = true;
+                        stopButton.setText("Start");
+
+                    } else {
+                        stopped = false;
+                        stopButton.setText("Stop");
+                    }
+
+                }
+            });
         for (JButton button : answerButtons) {
             //AtomicBoolean isMouseOver = new AtomicBoolean(false);
             for (ActionListener listener : button.getActionListeners()) {

@@ -7,18 +7,20 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class GameGUI extends JFrame {
-    private List<JButton> answerButtons;
     private JButton questionButton = new JButton();
+    private List<JButton> answerButtons;
     private JButton stopButton = new JButton("Stop");
     private List<JPanel> squarePanels;
     private GameLogic gameLogic;
+    private LevelManager levelManager;
     private Question question;
     Color customColor1 = new Color(150, 255, 150);
     Color customColor2 = new Color(255, 231, 151);
     Color customColor3 = new Color(151, 207, 255);
     Color customColor4 = new Color(255, 191, 255);
 
-    public GameGUI() {
+    public GameGUI(LevelManager levelManager) {
+        this.levelManager = levelManager;
         setSize(1144, 800);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
@@ -32,7 +34,7 @@ public class GameGUI extends JFrame {
         return answerButtons;
     }
 
-    public void updateGUI(int level, int questionNumber, Question question) {
+    public void updateGUI(int questionNumber, Question question) {
         this.question = question;
         answerButtons = new ArrayList<>();
         getContentPane().removeAll();
@@ -44,7 +46,8 @@ public class GameGUI extends JFrame {
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.setBackground(getBackgroundColor());
 
-        JLabel infoLabel = new JLabel("   •   Nivå " + level + " av 3   •   Fråga " + questionNumber + " av 3   •");
+        JLabel infoLabel = new JLabel("   •   Nivå " + levelManager.getCurrentLevel() + " av 3" +
+                                        "   •   Fråga " + questionNumber + " av 3   •");
         infoLabel.setBackground(getBackgroundColor());
         topPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
         topPanel.add(infoLabel, BorderLayout.NORTH);
@@ -101,17 +104,6 @@ public class GameGUI extends JFrame {
         setContentPane(mainPanel);
         revalidate();
         repaint();
-
-        if (level == 1) {
-            SwingUtilities.invokeLater(() -> {
-                try {
-                    Thread.sleep(450);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                gameLogic.playSound(question.getVoice());
-            });
-        }
     }
     public void scoreSquares(JPanel questionPanel) {
         int squareSize = 50;
@@ -126,17 +118,12 @@ public class GameGUI extends JFrame {
         for (int i = 0; i < numberOfSquares; i++) {
             JPanel squarePanel = new JPanel();
             squarePanel.setBorder(new LineBorder(Color.WHITE, 5));
-
-            boolean[] score = GameLogic.getRoundResults();
-            if (score[i]) {
-                squarePanel.setBackground(Color.GREEN);
-            } else {
-                squarePanel.setBackground(Color.RED);
-            }
+            squarePanel.setBackground(Color.RED);
             squarePanel.setPreferredSize(new Dimension(squareSize, squareSize));
             scorePanel.add(squarePanel);
             squarePanels.add(squarePanel);
         }
+        updateScore();
         questionPanel.add(scorePanel, BorderLayout.EAST);
     }
 
@@ -157,7 +144,7 @@ public class GameGUI extends JFrame {
                 });
             }
         }
-        updateSquareColors();
+        updateScore();
     }
 
     public void endGameGUI(){
@@ -219,7 +206,7 @@ public class GameGUI extends JFrame {
         for (ActionListener listener : questionButton.getActionListeners()) {
             questionButton.removeActionListener(listener);
         }
-        if (GameLogic.getCurrentLevel() == 1) {
+        if (levelManager.getCurrentLevel() == 1) {
             questionButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
@@ -249,22 +236,9 @@ public class GameGUI extends JFrame {
         }
     }
 
-    public void updateSquareColors() {
-        boolean[] temp = GameLogic.getRoundResults();
-
-        if (temp.length != squarePanels.size()) {
-            throw new IllegalArgumentException("Number of elements in the array must match the number of circles.");
-        }
-
-        for (int i = 0; i < squarePanels.size(); i++) {
-            JPanel circlePanel = squarePanels.get(i);
-            boolean isCorrect = temp[i];
-
-            if (isCorrect) {
-                circlePanel.setBackground(Color.GREEN);
-            } else {
-                circlePanel.setBackground(Color.RED);
-            }
+    public void updateScore() {
+        for (int i = 0; i < gameLogic.getCorrectAnswersInARow(); i++) {
+            squarePanels.get(i).setBackground(Color.GREEN);
         }
         repaint();
     }
@@ -278,7 +252,7 @@ public class GameGUI extends JFrame {
     }
 
     public Color getBackgroundColor() {
-        int currentLevel = GameLogic.getCurrentLevel();
+        int currentLevel = levelManager.getCurrentLevel();
         return switch (currentLevel) {
             case 1 -> customColor1;
             case 2 -> customColor2;

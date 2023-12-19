@@ -8,38 +8,35 @@ import java.io.File;
 public class GameLogic {
     private DAO dao = new DAO();
     private GameGUI gameGUI;
-    private static int currentLevel;
+    private LevelManager levelManager;
     private int currentQuestion;
     private int correctAnswersInARow;
-    private static boolean[] roundResults;
     private LevelQuestions levelQuestions;
-    boolean stopped = false;
     Question question;
+    boolean stopped = false;
     private volatile Thread backgroundThread;
     private final Object lock = new Object();
 
-    public GameLogic(GameGUI gameGUI) {
+    public GameLogic(GameGUI gameGUI, LevelManager levelManager) {
         this.gameGUI = gameGUI;
+        this.levelManager = levelManager;
 
         newGame();
     }
 
-    public static boolean[] getRoundResults() {
-        return roundResults;
-    }
-    public static int getCurrentLevel() {
-        return currentLevel;
+    public int getCorrectAnswersInARow() {
+        return correctAnswersInARow;
     }
 
     private void startNewRound() {
-        if (currentLevel <= 3) {
-            levelQuestions = dao.getLevelQuestions(currentLevel);
+        if (levelManager.getCurrentLevel() <= 3) {
+            levelQuestions = dao.getLevelQuestions(levelManager.getCurrentLevel());
             levelQuestions.shuffle();
             if (currentQuestion <= levelQuestions.getSize()) {
                 question = levelQuestions.getQuestion(currentQuestion);
                 pauseAndUpdateGUI();
             } else {
-                currentLevel++;
+                levelManager.increaseLevel();
                 moveToNextLevel();
             }
         } else {
@@ -50,7 +47,6 @@ public class GameLogic {
     public void restartRound() {
         currentQuestion = 1;
         correctAnswersInARow = 0;
-        roundResults = new boolean[3];
 
         SwingUtilities.invokeLater(this::startNewRound);
     }
@@ -60,7 +56,7 @@ public class GameLogic {
             question = levelQuestions.getQuestion(currentQuestion);
             pauseAndUpdateGUI();
         } else {
-            currentLevel++;
+            levelManager.increaseLevel();
             moveToNextLevel();
         }
     }
@@ -68,7 +64,6 @@ public class GameLogic {
     private void moveToNextLevel() {
         currentQuestion = 1;
         correctAnswersInARow = 0;
-        roundResults = new boolean[3];
 
         SwingUtilities.invokeLater(this::startNewRound);
     }
@@ -78,15 +73,14 @@ public class GameLogic {
             Question question = levelQuestions.getQuestion(currentQuestion);
 
             boolean isCorrect = question.isCorrectAnswer(selectedAnswer);
-            roundResults[currentQuestion - 1] = isCorrect;
 
             if (isCorrect) {
+                correctAnswersInARow++;
                 int correctButtonIndex = findAnswerButtonIndex(selectedAnswer);
                 gameGUI.displayCorrectAnswer(-1, correctButtonIndex);
-                correctAnswersInARow++;
 
                 if (correctAnswersInARow == 3) {
-                    currentLevel++;
+                    levelManager.increaseLevel();
                     SwingUtilities.invokeLater(() -> {
                         playSound("src/SoundFX/levelComplete.wav");
                     });
@@ -119,6 +113,16 @@ public class GameLogic {
         return -1;
     }
 
+    public void pauseAndPlaySound(int time) {
+        SwingUtilities.invokeLater(() -> {
+            try {
+                Thread.sleep(time);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            playSound(question.getVoice());
+        });
+    }
     public void playSound(String path) {
         try {
             File ljudFil = new File(path);
@@ -142,16 +146,19 @@ public class GameLogic {
 
     public void newGame(){
         SwingUtilities.invokeLater(() -> {
-            currentLevel = 1;
+            levelManager.resetLevel();
             this.currentQuestion = 1;
             this.correctAnswersInARow = 0;
-            roundResults = new boolean[3];
 
-            levelQuestions = dao.getLevelQuestions(currentLevel);
+            levelQuestions = dao.getLevelQuestions(levelManager.getCurrentLevel());
             levelQuestions.shuffle();
             question = levelQuestions.getQuestion(currentQuestion);
 
-            gameGUI.updateGUI(currentLevel, currentQuestion, question);
+            gameGUI.updateGUI(currentQuestion, question);
+
+            if (levelManager.getCurrentLevel() == 1) {
+                pauseAndPlaySound(450);
+            }
         });
     }
 
@@ -183,7 +190,10 @@ public class GameLogic {
                         e.printStackTrace();
                     }
                 }
-                SwingUtilities.invokeLater(() -> gameGUI.updateGUI(currentLevel, currentQuestion, question));
+                SwingUtilities.invokeLater(() -> gameGUI.updateGUI(currentQuestion, question));
+            }
+            if (levelManager.getCurrentLevel() == 1) {
+                SwingUtilities.invokeLater(() -> pauseAndPlaySound(450));
             }
         });
         backgroundThread.start();
@@ -197,8 +207,9 @@ public class GameLogic {
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            GameGUI gameGUI1 = new GameGUI();
-            GameLogic gameLogic = new GameLogic(gameGUI1);
+            LevelManager levelManager = LevelManager.getInstance();
+            GameGUI gameGUI1 = new GameGUI(levelManager);
+            GameLogic gameLogic = new GameLogic(gameGUI1, levelManager);
             gameGUI1.setGameLogic(gameLogic);
 
         });

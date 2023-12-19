@@ -10,9 +10,7 @@ public class GameGUI extends JFrame {
     private List<JButton> answerButtons;
     private JButton questionButton = new JButton();
     private JButton stopButton = new JButton("Stop");
-
     private List<JPanel> squarePanels;
-    boolean stopped = false;
     private GameLogic gameLogic;
     private Question question;
     Color customColor1 = new Color(150, 255, 150);
@@ -40,6 +38,7 @@ public class GameGUI extends JFrame {
     }
 
     public void updateGUI(int level, int questionNumber, Question question) {
+        System.out.println("Inne i updateGUI");
         this.question = question;
         answerButtons = new ArrayList<>();
         getContentPane().removeAll();
@@ -153,14 +152,6 @@ public class GameGUI extends JFrame {
                 gameLogic.playSound("src/SoundFX/correctAnswer.wav");
             });
         }
-        SwingUtilities.invokeLater(() -> {
-            try {
-                Thread.sleep(1300);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            resetAnswerButtonColors();
-        });
         updateSquareColors();
     }
 
@@ -173,21 +164,7 @@ public class GameGUI extends JFrame {
                 gameLogic.playSound("src/SoundFX/wrongAnswer.wav");
             });
         }
-        SwingUtilities.invokeLater(() -> {
-            try {
-                Thread.sleep(1300);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            resetAnswerButtonColors();
-        });
         updateSquareColors();
-    }
-
-    public void resetAnswerButtonColors() {
-        for (JButton button : answerButtons) {
-            button.setBackground(null);
-        }
     }
 
     public void endGameGUI(){
@@ -263,26 +240,17 @@ public class GameGUI extends JFrame {
             stopButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    if (!stopped) {
-                        stopped = true;
-                        stopButton.setText("Start");
-
-                    } else {
-                        stopped = false;
-                        stopButton.setText("Stop");
-                    }
-
+                    gameLogic.stopButtonPressed();
                 }
             });
         for (JButton button : answerButtons) {
-            //AtomicBoolean isMouseOver = new AtomicBoolean(false);
             for (ActionListener listener : button.getActionListeners()) {
                 button.removeActionListener(listener);
             }
             button.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    gameLogic.handleAnswerButtonClicked((ImageIcon) button.getIcon());
+                        gameLogic.handleAnswerButtonClicked((ImageIcon) button.getIcon());
                 }
             });
         }
@@ -306,8 +274,15 @@ public class GameGUI extends JFrame {
                 circlePanel.setBackground(Color.RED);
             }
         }
-
         repaint();
+    }
+
+    public void upDateStopButton(boolean stopped) {
+        if (stopped) {
+            stopButton.setText("Start");
+        } else {
+            stopButton.setText("Stop");
+        }
     }
 
     public Color getBackgroundColor() {

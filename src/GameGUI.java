@@ -34,7 +34,7 @@ public class GameGUI extends JFrame {
         return answerButtons;
     }
 
-    public void updateGUI(int questionNumber, Question question) {
+    public void updateGUI(Question question) {
         this.question = question;
         answerButtons = new ArrayList<>();
         getContentPane().removeAll();
@@ -46,8 +46,7 @@ public class GameGUI extends JFrame {
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.setBackground(getBackgroundColor());
 
-        JLabel infoLabel = new JLabel("   •   Nivå " + levelManager.getCurrentLevel() + " av 3" +
-                                        "   •   Fråga " + questionNumber + " av 3   •");
+        JLabel infoLabel = new JLabel("   •   Nivå " + levelManager.getCurrentLevel() + " av 3   •");
         infoLabel.setBackground(getBackgroundColor());
         topPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
         topPanel.add(infoLabel, BorderLayout.NORTH);

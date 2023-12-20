@@ -154,7 +154,7 @@ public class GameLogic {
             levelQuestions.shuffle();
             question = levelQuestions.getQuestion(currentQuestion);
 
-            gameGUI.updateGUI(currentQuestion, question);
+            gameGUI.updateGUI(question);
 
             if (levelManager.getCurrentLevel() == 1) {
                 pauseAndPlaySound(450);
@@ -190,7 +190,7 @@ public class GameLogic {
                         e.printStackTrace();
                     }
                 }
-                SwingUtilities.invokeLater(() -> gameGUI.updateGUI(currentQuestion, question));
+                SwingUtilities.invokeLater(() -> gameGUI.updateGUI(question));
             }
             if (levelManager.getCurrentLevel() == 1) {
                 SwingUtilities.invokeLater(() -> pauseAndPlaySound(450));

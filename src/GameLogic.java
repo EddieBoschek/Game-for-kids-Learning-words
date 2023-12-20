@@ -30,7 +30,7 @@ public class GameLogic {
         return correctAnswersInARow;
     }
 
-    private void startNewRound() {
+    public void startNewRound() {
         if (levelManager.getCurrentLevel() <= 3) {
             levelQuestions = dao.getLevelQuestions(levelManager.getCurrentLevel());
             levelQuestions.shuffle();
@@ -53,7 +53,7 @@ public class GameLogic {
         pauseAndUpdateGUI(1300);
     }
 
-    private void moveToNextLevel() {
+    public void moveToNextLevel() {
         currentQuestion = 1;
         correctAnswersInARow = 0;
 
@@ -92,7 +92,7 @@ public class GameLogic {
         }
     }
 
-    private int findAnswerButtonIndex(ImageIcon selectedAnswer) {
+    public int findAnswerButtonIndex(ImageIcon selectedAnswer) {
         Image answer = selectedAnswer.getImage();
         for (int i = 0; i < gameGUI.getAnswerButtons().size(); i++) {
             ImageIcon temp = (ImageIcon) gameGUI.getAnswerButtons().get(i).getIcon();
@@ -158,7 +158,7 @@ public class GameLogic {
         }
     }
 
-    private void playMusic(String filePath) {
+    public void playMusic(String filePath) {
         try {
             while (true) {
                 AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(new File(filePath));
@@ -185,31 +185,25 @@ public class GameLogic {
             e.printStackTrace();
         }
     }
-    private void muteMusic() throws LineUnavailableException {
+    public void muteOrUnmuteMusic() {
         if (backgroundMusicClip != null && backgroundMusicClip.
                 isControlSupported(FloatControl.Type.MASTER_GAIN)) {
             FloatControl volumeControl = (FloatControl) backgroundMusicClip.
                     getControl(FloatControl.Type.MASTER_GAIN);
-            volumeControl.setValue(volumeControl.getMinimum());
-        }
-    }
-
-    private void unmuteMusic() throws LineUnavailableException {
-        if (backgroundMusicClip != null && backgroundMusicClip.
-                isControlSupported(FloatControl.Type.MASTER_GAIN)) {
-            FloatControl volumeControl = (FloatControl) backgroundMusicClip.
-                    getControl(FloatControl.Type.MASTER_GAIN);
-            volumeControl.setValue(-10.0f);
+            if (!muted) {
+                volumeControl.setValue(volumeControl.getMinimum());
+                System.out.println("Down");
+            } else {
+                volumeControl.setValue(-10.0f);
+                System.out.println("Up");
+            }
         }
     }
 
     public void musicButtonPressed() throws LineUnavailableException {
+        muteOrUnmuteMusic();
         muted = !muted;
-        if (muted) {
-            muteMusic();
-        } else {
-            unmuteMusic();
-        }
+        System.out.println("musicButtonPressed");
     }
     public void stopButtonPressed() {
         stopped = !stopped;
@@ -219,7 +213,7 @@ public class GameLogic {
         }
     }
 
-    private void pauseAndUpdateGUI(int time) {
+    public void pauseAndUpdateGUI(int time) {
         backgroundThread = new Thread(() -> {
             try {
                 Thread.sleep(time);

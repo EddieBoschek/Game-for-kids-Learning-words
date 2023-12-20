@@ -16,10 +16,11 @@ public class GameGUI extends JFrame {
     private GameLogic gameLogic;
     private LevelManager levelManager;
     private Question question;
-    Color customColor1 = new Color(150, 255, 150);
-    Color customColor2 = new Color(255, 231, 151);
-    Color customColor3 = new Color(151, 207, 255);
-    Color customColor4 = new Color(255, 191, 255);
+    private boolean answerButtonPressed = false;
+    private Color customColor1 = new Color(150, 255, 150);
+    private Color customColor2 = new Color(255, 231, 151);
+    private Color customColor3 = new Color(151, 207, 255);
+    private Color customColor4 = new Color(255, 191, 255);
 
     public GameGUI(LevelManager levelManager) {
         this.levelManager = levelManager;
@@ -37,6 +38,7 @@ public class GameGUI extends JFrame {
     }
 
     public void updateGUI(Question question) {
+        answerButtonPressed = false;
         this.question = question;
         answerButtons = new ArrayList<>();
         getContentPane().removeAll();
@@ -136,15 +138,17 @@ public class GameGUI extends JFrame {
     }
 
     public void displayCorrectAnswer(int incorrectButtonIndex, int correctButtonIndex) {
-        if (incorrectButtonIndex == -1) {
+        if (!answerButtonPressed && incorrectButtonIndex == -1) {
             if (correctButtonIndex >= 0 && correctButtonIndex < answerButtons.size()) {
+                answerButtonPressed = true;
                 answerButtons.get(correctButtonIndex).setBackground(Color.GREEN);
                 SwingUtilities.invokeLater(() -> {
                     gameLogic.playSound(null, 1);
                 });
             }
-        } else {
+        } else if (!answerButtonPressed){
             if (incorrectButtonIndex >= 0 && incorrectButtonIndex < answerButtons.size()) {
+                answerButtonPressed = true;
                 answerButtons.get(incorrectButtonIndex).setBackground(Color.RED);
                 answerButtons.get(correctButtonIndex).setBackground(Color.GREEN);
                 SwingUtilities.invokeLater(() -> {
@@ -223,13 +227,13 @@ public class GameGUI extends JFrame {
             });
         }
         for (JButton button : answerButtons) {
-            for (ActionListener listener : button.getActionListeners()) {
-                button.removeActionListener(listener);
-            }
             button.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                        gameLogic.handleAnswerButtonClicked((ImageIcon) button.getIcon());
+                    gameLogic.handleAnswerButtonClicked((ImageIcon) button.getIcon());
+                    for (ActionListener listener : button.getActionListeners()) {
+                        button.removeActionListener(listener);
+                    }
                 }
             });
         }

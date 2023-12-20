@@ -1,6 +1,4 @@
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.Clip;
+import javax.sound.sampled.*;
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
@@ -8,95 +6,93 @@ import java.io.File;
 public class GameLogic {
     private DAO dao = new DAO();
     private GameGUI gameGUI;
-    private static int currentLevel;
+    private LevelManager levelManager;
     private int currentQuestion;
     private int correctAnswersInARow;
-    private static boolean[] roundResults;
     private LevelQuestions levelQuestions;
+    private Question question;
+    private boolean stopped = false;
+    private boolean muted = false;
+    private Clip backgroundMusicClip;
+    private volatile Thread backgroundThread;
+    private final Object lock = new Object();
 
-    public GameLogic(GameGUI gameGUI) {
+    public GameLogic(GameGUI gameGUI, LevelManager levelManager) {
         this.gameGUI = gameGUI;
-        currentLevel = 1;
-        this.currentQuestion = 1;
-        this.correctAnswersInARow = 0;
-        roundResults = new boolean[3];
+        this.levelManager = levelManager;
 
-        startNewRound();
+        newGame();
+        Thread musicThread = new Thread(() -> playMusic(dao.getSoundPath(1)));
+        musicThread.start();
     }
 
-    public static boolean[] getRoundResults() {
-        return roundResults;
+    public int getCorrectAnswersInARow() {
+        return correctAnswersInARow;
     }
 
-    public void restartGame() {
-        currentQuestion = 1;
-        correctAnswersInARow = 0;
-        roundResults = new boolean[3];
-
-        SwingUtilities.invokeLater(this::startNewRound);
-    }
-
-    private void startNewRound() {
-        if (currentLevel <= 3) {
-            levelQuestions = dao.getLevelQuestions(currentLevel);
+    public void startNewRound() {
+        if (levelManager.getCurrentLevel() <= 3) {
+            levelQuestions = dao.getLevelQuestions(levelManager.getCurrentLevel());
             levelQuestions.shuffle();
-            if (currentQuestion <= levelQuestions.getSize()) {
-                Question question = levelQuestions.getQuestion(currentQuestion);
-                gameGUI.updateGUI(currentLevel, currentQuestion, question);
-            } else {
-                currentLevel++;
-                moveToNextLevel();
-            }
+            question = levelQuestions.getQuestion(currentQuestion);
+            pauseAndUpdateGUI(1300);
         } else {
             gameGUI.endGameGUI();
         }
     }
 
+    public void restartRound() {
+        currentQuestion = 1;
+        correctAnswersInARow = 0;
+
+        SwingUtilities.invokeLater(this::startNewRound);
+    }
+
     public void moveToNextQuestion() {
-        if (currentQuestion <= levelQuestions.getSize()) {
-            Question question = levelQuestions.getQuestion(currentQuestion);
-            gameGUI.updateGUI(currentLevel, currentQuestion, question);
-        } else {
-            currentLevel++;
-            moveToNextLevel();
-        }
+        question = levelQuestions.getQuestion(currentQuestion);
+        pauseAndUpdateGUI(1300);
+    }
+
+    public void moveToNextLevel() {
+        currentQuestion = 1;
+        correctAnswersInARow = 0;
+
+        SwingUtilities.invokeLater(this::startNewRound);
     }
 
     public void handleAnswerButtonClicked(ImageIcon selectedAnswer) {
-        Question question = levelQuestions.getQuestion(currentQuestion);
+        if (!stopped) {
+            Question question = levelQuestions.getQuestion(currentQuestion);
 
-        boolean isCorrect = question.isCorrectAnswer(selectedAnswer);
-        roundResults[currentQuestion - 1] = isCorrect;
+            boolean isCorrect = question.isCorrectAnswer(selectedAnswer);
 
-        if (isCorrect) {
-            int correctButtonIndex = findAnswerButtonIndex(selectedAnswer);
-            gameGUI.displayCorrectAnswer(correctButtonIndex);
-            correctAnswersInARow++;
-            System.out.println("Correct answers in a row: " + correctAnswersInARow);
+            if (isCorrect) {
+                correctAnswersInARow++;
+                int correctButtonIndex = findAnswerButtonIndex(selectedAnswer);
+                gameGUI.displayCorrectAnswer(-1, correctButtonIndex);
 
-            if (correctAnswersInARow == 3) {
-
-                currentLevel++;
-                SwingUtilities.invokeLater(() -> {
-                    playSound("src/SoundFX/levelComplete.wav");
-                });
-                SwingUtilities.invokeLater(this::moveToNextLevel);
+                if (correctAnswersInARow == 3) {
+                    levelManager.increaseLevel();
+                    SwingUtilities.invokeLater(() -> {
+                        pauseAndPlaySound(dao.getSoundPath(4), 300);
+                    });
+                    SwingUtilities.invokeLater(this::moveToNextLevel);
+                } else {
+                    currentQuestion++;
+                    SwingUtilities.invokeLater(this::moveToNextQuestion);
+                }
             } else {
-                currentQuestion++;
-                SwingUtilities.invokeLater(this::moveToNextQuestion);
+                correctAnswersInARow = 0;
+                int incorrectButtonIndex = findAnswerButtonIndex(selectedAnswer);
+                int correctButtonIndex = findAnswerButtonIndex(levelQuestions.getQuestion
+                        (currentQuestion).getCorrectAnswer());
+                gameGUI.displayCorrectAnswer(incorrectButtonIndex, correctButtonIndex);
+                restartRound();
             }
-        } else {
-            correctAnswersInARow = 0;
-            System.out.println("Incorrect answer. Resetting correctAnswersInARow.");
-            int incorrectButtonIndex = findAnswerButtonIndex(selectedAnswer);
-            int correctButtonIndex = findAnswerButtonIndex(levelQuestions.getQuestion
-                    (currentQuestion).getCorrectAnswer());
-            gameGUI.displayIncorrectAnswer(incorrectButtonIndex, correctButtonIndex);
-            restartGame();
         }
     }
 
-    private int findAnswerButtonIndex(ImageIcon selectedAnswer) {
+    public int findAnswerButtonIndex(ImageIcon selectedAnswer) {
         Image answer = selectedAnswer.getImage();
         for (int i = 0; i < gameGUI.getAnswerButtons().size(); i++) {
             ImageIcon temp = (ImageIcon) gameGUI.getAnswerButtons().get(i).getIcon();
@@ -108,54 +104,155 @@ public class GameLogic {
         return -1;
     }
 
-    private void moveToNextLevel() {
-        currentQuestion = 1;
-        correctAnswersInARow = 0;
-        roundResults = new boolean[3];
+    public void newGame(){
+        SwingUtilities.invokeLater(() -> {
+            levelManager.resetLevel();
+            this.currentQuestion = 1;
+            this.correctAnswersInARow = 0;
 
-        SwingUtilities.invokeLater(this::startNewRound);
+            levelQuestions = dao.getLevelQuestions(levelManager.getCurrentLevel());
+            levelQuestions.shuffle();
+            question = levelQuestions.getQuestion(currentQuestion);
+
+            gameGUI.updateGUI(question);
+
+            if (levelManager.getCurrentLevel() == 1) {
+                pauseAndPlaySound(question.getVoice(), 450);
+            }
+        });
     }
 
-    public static int getCurrentLevel() {
-        return currentLevel;
+    public void pauseAndPlaySound(String path, int time) {
+        SwingUtilities.invokeLater(() -> {
+            try {
+                Thread.sleep(time);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            playSound(path, 0);
+        });
     }
-
-    public void playSound(String path) {
+    public void playSound(String path, int i) {
+        String filePath = path;
+        if (i == 1) {
+            filePath = dao.getSoundPath(2);
+        } else if (i == 2) {
+            filePath = dao.getSoundPath(3);
+        }
         try {
-            File ljudFil = new File(path);
-            AudioInputStream ljudInput = AudioSystem.getAudioInputStream(ljudFil);
+            File audioFile = new File(filePath);
+            AudioInputStream audioInput = AudioSystem.getAudioInputStream(audioFile);
 
             Clip clip = AudioSystem.getClip();
-            clip.open(ljudInput);
+            clip.open(audioInput);
             clip.start();
-
-            while (!clip.isRunning()) {
-                Thread.sleep(10);
-            }
-            while (clip.isRunning()) {
-                Thread.sleep(10);
-            }
-            clip.close();
+             while (!clip.isRunning()) {
+                 Thread.sleep(10);
+             }
+             while (clip.isRunning()) {
+                 Thread.sleep(10);
+             }
+             clip.close();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public void newGame(){
-        SwingUtilities.invokeLater(() -> {
-            currentLevel = 1;
-            this.currentQuestion = 1;
-            this.correctAnswersInARow = 0;
-            roundResults = new boolean[3];
+    public void playMusic(String filePath) {
+        try {
+            while (true) {
+                AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(new File(filePath));
 
-            startNewRound();
+                backgroundMusicClip = AudioSystem.getClip();
+                backgroundMusicClip.open(audioInputStream);
+
+                FloatControl volumeControl = (FloatControl) backgroundMusicClip.getControl(FloatControl.Type.MASTER_GAIN);
+                volumeControl.setValue(-10.0f);
+
+                backgroundMusicClip.start();
+
+                while (backgroundMusicClip.isRunning()) {
+                    try {
+                        Thread.sleep(10);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                backgroundMusicClip.close();
+                audioInputStream.close();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    public void muteOrUnmuteMusic() {
+        if (backgroundMusicClip != null && backgroundMusicClip.
+                isControlSupported(FloatControl.Type.MASTER_GAIN)) {
+            FloatControl volumeControl = (FloatControl) backgroundMusicClip.
+                    getControl(FloatControl.Type.MASTER_GAIN);
+            if (!muted) {
+                volumeControl.setValue(volumeControl.getMinimum());
+                System.out.println("Down");
+            } else {
+                volumeControl.setValue(-10.0f);
+                System.out.println("Up");
+            }
+        }
+    }
+
+    public void musicButtonPressed() throws LineUnavailableException {
+        muteOrUnmuteMusic();
+        muted = !muted;
+        System.out.println("musicButtonPressed");
+    }
+    public void stopButtonPressed() {
+        stopped = !stopped;
+        gameGUI.upDateStopButton(stopped);
+        if (!stopped) {
+            resumeThread();
+        }
+    }
+
+    public void pauseAndUpdateGUI(int time) {
+        backgroundThread = new Thread(() -> {
+            try {
+                Thread.sleep(time);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            synchronized (lock) {
+                while (stopped) {
+                    try {
+                        lock.wait();
+                        try {
+                            Thread.sleep(1100);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                SwingUtilities.invokeLater(() -> gameGUI.updateGUI(question));
+            }
+            if (levelManager.getCurrentLevel() == 1) {
+                SwingUtilities.invokeLater(() -> pauseAndPlaySound(question.getVoice(), 450));
+            }
         });
+        backgroundThread.start();
+    }
+
+    public void resumeThread() {
+        synchronized (lock) {
+            lock.notify();
+        }
     }
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            GameGUI gameGUI1 = new GameGUI();
-            GameLogic gameLogic = new GameLogic(gameGUI1);
+            LevelManager levelManager = LevelManager.getInstance();
+            GameGUI gameGUI1 = new GameGUI(levelManager);
+            GameLogic gameLogic = new GameLogic(gameGUI1, levelManager);
             gameGUI1.setGameLogic(gameLogic);
 
         });

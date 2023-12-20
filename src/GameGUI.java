@@ -1,3 +1,4 @@
+import javax.sound.sampled.LineUnavailableException;
 import javax.swing.*;
 import javax.swing.border.LineBorder;
 import java.awt.*;
@@ -10,6 +11,7 @@ public class GameGUI extends JFrame {
     private JButton questionButton = new JButton();
     private List<JButton> answerButtons;
     private JButton stopButton = new JButton("Stop");
+    private JButton musicButton = new JButton("\uD83C\uDFB5");
     private List<JPanel> squarePanels;
     private GameLogic gameLogic;
     private LevelManager levelManager;
@@ -89,10 +91,17 @@ public class GameGUI extends JFrame {
         midPanel.add(questionsPanel, BorderLayout.NORTH);
         midPanel.add(answerPanel, BorderLayout.CENTER);
 
-        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        bottomPanel.setBackground(getBackgroundColor());
+        JPanel bottomPanel = new JPanel(new GridLayout(1, 2));
+        JPanel stopPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        stopPanel.setBackground(getBackgroundColor());
+        JPanel musicPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        musicPanel.setBackground(getBackgroundColor());
         stopButton.setPreferredSize(new Dimension(60, 60));
-        bottomPanel.add(stopButton);
+        musicButton.setPreferredSize(new Dimension(60, 60));
+        stopPanel.add(stopButton);
+        musicPanel.add(musicButton);
+        bottomPanel.add(stopPanel);
+        bottomPanel.add(musicPanel);
 
         mainPanel.add(topPanel, BorderLayout.NORTH);
         mainPanel.add(midPanel, BorderLayout.CENTER);
@@ -131,7 +140,7 @@ public class GameGUI extends JFrame {
             if (correctButtonIndex >= 0 && correctButtonIndex < answerButtons.size()) {
                 answerButtons.get(correctButtonIndex).setBackground(Color.GREEN);
                 SwingUtilities.invokeLater(() -> {
-                    gameLogic.playSound("src/SoundFX/correctAnswer.wav");
+                    gameLogic.playSound(null, 1);
                 });
             }
         } else {
@@ -139,7 +148,7 @@ public class GameGUI extends JFrame {
                 answerButtons.get(incorrectButtonIndex).setBackground(Color.RED);
                 answerButtons.get(correctButtonIndex).setBackground(Color.GREEN);
                 SwingUtilities.invokeLater(() -> {
-                    gameLogic.playSound("src/SoundFX/wrongAnswer.wav");
+                    gameLogic.playSound(null, 2);
                 });
             }
         }
@@ -209,19 +218,10 @@ public class GameGUI extends JFrame {
             questionButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    gameLogic.playSound(question.getVoice());
+                    gameLogic.playSound(question.getVoice(), 0);
                 }
             });
         }
-        for (ActionListener listener : stopButton.getActionListeners()) {
-            stopButton.removeActionListener(listener);
-        }
-            stopButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    gameLogic.stopButtonPressed();
-                }
-            });
         for (JButton button : answerButtons) {
             for (ActionListener listener : button.getActionListeners()) {
                 button.removeActionListener(listener);
@@ -233,6 +233,28 @@ public class GameGUI extends JFrame {
                 }
             });
         }
+        for (ActionListener listener : stopButton.getActionListeners()) {
+            stopButton.removeActionListener(listener);
+        }
+        stopButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                gameLogic.stopButtonPressed();
+            }
+        });
+        for (ActionListener listener : musicButton.getActionListeners()) {
+            musicButton.removeActionListener(listener);
+        }
+        musicButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    gameLogic.musicButtonPressed();
+                } catch (LineUnavailableException ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
+        });
     }
 
     public void updateScore() {

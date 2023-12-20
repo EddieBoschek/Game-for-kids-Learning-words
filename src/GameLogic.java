@@ -1,6 +1,4 @@
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.Clip;
+import javax.sound.sampled.*;
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
@@ -12,16 +10,24 @@ public class GameLogic {
     private int currentQuestion;
     private int correctAnswersInARow;
     private LevelQuestions levelQuestions;
-    Question question;
-    boolean stopped = false;
+    private Question question;
+    private boolean stopped = false;
+    private boolean muted = false;
+    private Clip backgroundMusicClip;
     private volatile Thread backgroundThread;
     private final Object lock = new Object();
+    private String music = "src/SoundFX/BackgroundMusic.wav";
+    private String correctAnswerSound = "src/SoundFX/correctAnswer.wav";
+    private String wrongAnswerSound = "src/SoundFX/wrongAnswer.wav";
+    private String levelCompleteSound = "src/SoundFX/levelComplete.wav";
 
     public GameLogic(GameGUI gameGUI, LevelManager levelManager) {
         this.gameGUI = gameGUI;
         this.levelManager = levelManager;
 
         newGame();
+        Thread musicThread = new Thread(() -> playMusic(music));
+        musicThread.start();
     }
 
     public int getCorrectAnswersInARow() {
@@ -82,7 +88,7 @@ public class GameLogic {
                 if (correctAnswersInARow == 3) {
                     levelManager.increaseLevel();
                     SwingUtilities.invokeLater(() -> {
-                        playSound("src/SoundFX/levelComplete.wav");
+                        playSound(levelCompleteSound, 0);
                     });
                     SwingUtilities.invokeLater(this::moveToNextLevel);
                 } else {
@@ -91,7 +97,6 @@ public class GameLogic {
                 }
             } else {
                 correctAnswersInARow = 0;
-                System.out.println("Incorrect answer. Resetting correctAnswersInARow.");
                 int incorrectButtonIndex = findAnswerButtonIndex(selectedAnswer);
                 int correctButtonIndex = findAnswerButtonIndex(levelQuestions.getQuestion
                         (currentQuestion).getCorrectAnswer());
@@ -113,37 +118,6 @@ public class GameLogic {
         return -1;
     }
 
-    public void pauseAndPlaySound(int time) {
-        SwingUtilities.invokeLater(() -> {
-            try {
-                Thread.sleep(time);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            playSound(question.getVoice());
-        });
-    }
-    public void playSound(String path) {
-        try {
-            File ljudFil = new File(path);
-            AudioInputStream ljudInput = AudioSystem.getAudioInputStream(ljudFil);
-
-            Clip clip = AudioSystem.getClip();
-            clip.open(ljudInput);
-            clip.start();
-
-            while (!clip.isRunning()) {
-                Thread.sleep(10);
-            }
-            while (clip.isRunning()) {
-                Thread.sleep(10);
-            }
-            clip.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
     public void newGame(){
         SwingUtilities.invokeLater(() -> {
             levelManager.resetLevel();
@@ -162,6 +136,95 @@ public class GameLogic {
         });
     }
 
+    public void pauseAndPlaySound(int time) {
+        SwingUtilities.invokeLater(() -> {
+            try {
+                Thread.sleep(time);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            playSound(question.getVoice(), 0);
+        });
+    }
+    public void playSound(String path, int i) {
+        String filePath = path;
+        if (i == 1) {
+            filePath = correctAnswerSound;
+        } else if (i == 2) {
+            filePath = wrongAnswerSound;
+        }
+        try {
+            File audioFile = new File(filePath);
+            AudioInputStream audioInput = AudioSystem.getAudioInputStream(audioFile);
+
+            Clip clip = AudioSystem.getClip();
+            clip.open(audioInput);
+            clip.start();
+             while (!clip.isRunning()) {
+                 Thread.sleep(10);
+             }
+             while (clip.isRunning()) {
+                 Thread.sleep(10);
+             }
+             clip.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void playMusic(String filePath) {
+        try {
+            while (true) {
+                AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(new File(filePath));
+
+                backgroundMusicClip = AudioSystem.getClip();
+                backgroundMusicClip.open(audioInputStream);
+
+                FloatControl volumeControl = (FloatControl) backgroundMusicClip.getControl(FloatControl.Type.MASTER_GAIN);
+                volumeControl.setValue(-10.0f);
+
+                backgroundMusicClip.start();
+
+                while (backgroundMusicClip.isRunning()) {
+                    try {
+                        Thread.sleep(10);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                backgroundMusicClip.close();
+                audioInputStream.close();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    private void muteMusic() throws LineUnavailableException {
+        if (backgroundMusicClip != null && backgroundMusicClip.
+                isControlSupported(FloatControl.Type.MASTER_GAIN)) {
+            FloatControl volumeControl = (FloatControl) backgroundMusicClip.
+                    getControl(FloatControl.Type.MASTER_GAIN);
+            volumeControl.setValue(volumeControl.getMinimum());
+        }
+    }
+
+    private void unmuteMusic() throws LineUnavailableException {
+        if (backgroundMusicClip != null && backgroundMusicClip.
+                isControlSupported(FloatControl.Type.MASTER_GAIN)) {
+            FloatControl volumeControl = (FloatControl) backgroundMusicClip.
+                    getControl(FloatControl.Type.MASTER_GAIN);
+            volumeControl.setValue(-10.0f);
+        }
+    }
+
+    public void musicButtonPressed() throws LineUnavailableException {
+        muted = !muted;
+        if (muted) {
+            muteMusic();
+        } else {
+            unmuteMusic();
+        }
+    }
     public void stopButtonPressed() {
         stopped = !stopped;
         gameGUI.upDateStopButton(stopped);

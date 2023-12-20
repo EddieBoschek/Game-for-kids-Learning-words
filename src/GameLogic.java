@@ -16,17 +16,13 @@ public class GameLogic {
     private Clip backgroundMusicClip;
     private volatile Thread backgroundThread;
     private final Object lock = new Object();
-    private String music = "src/SoundFX/BackgroundMusic.wav";
-    private String correctAnswerSound = "src/SoundFX/correctAnswer.wav";
-    private String wrongAnswerSound = "src/SoundFX/wrongAnswer.wav";
-    private String levelCompleteSound = "src/SoundFX/levelComplete.wav";
 
     public GameLogic(GameGUI gameGUI, LevelManager levelManager) {
         this.gameGUI = gameGUI;
         this.levelManager = levelManager;
 
         newGame();
-        Thread musicThread = new Thread(() -> playMusic(music));
+        Thread musicThread = new Thread(() -> playMusic(dao.getSoundPath(1)));
         musicThread.start();
     }
 
@@ -38,13 +34,8 @@ public class GameLogic {
         if (levelManager.getCurrentLevel() <= 3) {
             levelQuestions = dao.getLevelQuestions(levelManager.getCurrentLevel());
             levelQuestions.shuffle();
-            if (currentQuestion <= levelQuestions.getSize()) {
-                question = levelQuestions.getQuestion(currentQuestion);
-                pauseAndUpdateGUI();
-            } else {
-                levelManager.increaseLevel();
-                moveToNextLevel();
-            }
+            question = levelQuestions.getQuestion(currentQuestion);
+            pauseAndUpdateGUI(1300);
         } else {
             gameGUI.endGameGUI();
         }
@@ -58,13 +49,8 @@ public class GameLogic {
     }
 
     public void moveToNextQuestion() {
-        if (currentQuestion <= levelQuestions.getSize()) {
-            question = levelQuestions.getQuestion(currentQuestion);
-            pauseAndUpdateGUI();
-        } else {
-            levelManager.increaseLevel();
-            moveToNextLevel();
-        }
+        question = levelQuestions.getQuestion(currentQuestion);
+        pauseAndUpdateGUI(1300);
     }
 
     private void moveToNextLevel() {
@@ -88,7 +74,7 @@ public class GameLogic {
                 if (correctAnswersInARow == 3) {
                     levelManager.increaseLevel();
                     SwingUtilities.invokeLater(() -> {
-                        playSound(levelCompleteSound, 0);
+                        pauseAndPlaySound(dao.getSoundPath(4), 300);
                     });
                     SwingUtilities.invokeLater(this::moveToNextLevel);
                 } else {
@@ -131,27 +117,27 @@ public class GameLogic {
             gameGUI.updateGUI(question);
 
             if (levelManager.getCurrentLevel() == 1) {
-                pauseAndPlaySound(450);
+                pauseAndPlaySound(question.getVoice(), 450);
             }
         });
     }
 
-    public void pauseAndPlaySound(int time) {
+    public void pauseAndPlaySound(String path, int time) {
         SwingUtilities.invokeLater(() -> {
             try {
                 Thread.sleep(time);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            playSound(question.getVoice(), 0);
+            playSound(path, 0);
         });
     }
     public void playSound(String path, int i) {
         String filePath = path;
         if (i == 1) {
-            filePath = correctAnswerSound;
+            filePath = dao.getSoundPath(2);
         } else if (i == 2) {
-            filePath = wrongAnswerSound;
+            filePath = dao.getSoundPath(3);
         }
         try {
             File audioFile = new File(filePath);
@@ -233,10 +219,10 @@ public class GameLogic {
         }
     }
 
-    private void pauseAndUpdateGUI() {
+    private void pauseAndUpdateGUI(int time) {
         backgroundThread = new Thread(() -> {
             try {
-                Thread.sleep(1300);
+                Thread.sleep(time);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -256,7 +242,7 @@ public class GameLogic {
                 SwingUtilities.invokeLater(() -> gameGUI.updateGUI(question));
             }
             if (levelManager.getCurrentLevel() == 1) {
-                SwingUtilities.invokeLater(() -> pauseAndPlaySound(450));
+                SwingUtilities.invokeLater(() -> pauseAndPlaySound(question.getVoice(), 450));
             }
         });
         backgroundThread.start();

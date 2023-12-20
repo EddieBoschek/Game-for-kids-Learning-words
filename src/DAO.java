@@ -7,6 +7,7 @@ import java.util.List;
 
 public class DAO implements DAOInterface{
     private List<LevelQuestions> levelQList = new ArrayList<>();
+    private List<String> soundPaths = new ArrayList<>();
     public DAO() {
         LevelQuestions level1 = new LevelQuestions(getDataForLevelQuestions("src/GameImages", "1"));
         LevelQuestions level2 = new LevelQuestions(getDataForLevelQuestions("src/GameImages", "2"));
@@ -15,10 +16,38 @@ public class DAO implements DAOInterface{
         levelQList.add(level1);
         levelQList.add(level2);
         levelQList.add(level3);
+
+        getSoundPathsData("src/SoundFX");
     }
     @Override
     public LevelQuestions getLevelQuestions(int level) {
         return levelQList.get(level - 1);
+    }
+    @Override
+    public String getSoundPath(int pathNumber) {
+        return soundPaths.get(pathNumber - 1);
+    }
+
+    public void getSoundPathsData(String filePath) {
+        File[] allFiles;
+
+        File path = new File(filePath);
+        allFiles = path.listFiles();
+        assert allFiles != null;
+        Arrays.sort(allFiles, Comparator.comparing(File::getName));
+        int count = 1;
+        for (int i = 0; i < 4; i++) {
+            for (File file : allFiles) {
+                if (file.getName().substring(1, 2).equals(String.valueOf(count))) {
+                    soundPaths.add(file.getPath());
+                    count++;
+                }
+            }
+        }
+        if (soundPaths.size() == 4) {
+            System.out.println("Sound paths data added correctly.");
+            System.out.println("---");
+        }
     }
 
     public List<Question> getDataForLevelQuestions(String filePath, String level) {

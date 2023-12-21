@@ -31,12 +31,12 @@ public class GameLogic {
         return correctAnswersInARow;
     }
 
-    public void startNewRound() {
+    public void startNewRound(int time) {
         if (levelManager.getCurrentLevel() <= 3) {
             levelQuestions = dao.getLevelQuestions(levelManager.getCurrentLevel());
             levelQuestions.shuffle();
             question = levelQuestions.getQuestion(currentQuestion);
-            pauseAndUpdateGUI(1300);
+            pauseAndUpdateGUI(time);
         } else {
             gameGUI.endGameGUI();
         }
@@ -46,7 +46,7 @@ public class GameLogic {
         currentQuestion = 1;
         correctAnswersInARow = 0;
 
-        SwingUtilities.invokeLater(this::startNewRound);
+        SwingUtilities.invokeLater(() -> startNewRound(1300));
     }
 
     public void moveToNextQuestion() {
@@ -58,7 +58,7 @@ public class GameLogic {
         currentQuestion = 1;
         correctAnswersInARow = 0;
 
-        SwingUtilities.invokeLater(this::startNewRound);
+        SwingUtilities.invokeLater(() -> startNewRound(200));
     }
 
     public void handleAnswerButtonClicked(ImageIcon selectedAnswer) {
@@ -76,7 +76,7 @@ public class GameLogic {
                 if (correctAnswersInARow == 3) {
                     levelManager.increaseLevel();
                     SwingUtilities.invokeLater(() -> {
-                        pauseAndPlaySound(dao.getSoundPath(4), 300);
+                        pauseAndPlaySound(dao.getSoundPath(4), 350);
                     });
                     SwingUtilities.invokeLater(this::moveToNextLevel);
                 } else {
@@ -229,7 +229,7 @@ public class GameLogic {
                     try {
                         lock.wait();
                         try {
-                            Thread.sleep(1100);
+                            Thread.sleep(1000);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }

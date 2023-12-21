@@ -11,6 +11,7 @@ public class GameLogic {
     private int correctAnswersInARow;
     private LevelQuestions levelQuestions;
     private Question question;
+    private boolean answerButtonPressed = false;
     private boolean stopped = false;
     private boolean muted = false;
     private Clip backgroundMusicClip;
@@ -61,7 +62,8 @@ public class GameLogic {
     }
 
     public void handleAnswerButtonClicked(ImageIcon selectedAnswer) {
-        if (!stopped) {
+        if (!stopped && !answerButtonPressed) {
+            answerButtonPressed = true;
             Question question = levelQuestions.getQuestion(currentQuestion);
 
             boolean isCorrect = question.isCorrectAnswer(selectedAnswer);
@@ -109,6 +111,7 @@ public class GameLogic {
             levelManager.resetLevel();
             this.currentQuestion = 1;
             this.correctAnswersInARow = 0;
+            answerButtonPressed = false;
 
             levelQuestions = dao.getLevelQuestions(levelManager.getCurrentLevel());
             levelQuestions.shuffle();
@@ -166,7 +169,8 @@ public class GameLogic {
                 backgroundMusicClip = AudioSystem.getClip();
                 backgroundMusicClip.open(audioInputStream);
 
-                FloatControl volumeControl = (FloatControl) backgroundMusicClip.getControl(FloatControl.Type.MASTER_GAIN);
+                FloatControl volumeControl = (FloatControl) backgroundMusicClip.
+                                            getControl(FloatControl.Type.MASTER_GAIN);
                 volumeControl.setValue(-10.0f);
 
                 backgroundMusicClip.start();
@@ -234,6 +238,7 @@ public class GameLogic {
                     }
                 }
                 SwingUtilities.invokeLater(() -> gameGUI.updateGUI(question));
+                answerButtonPressed = false;
             }
             if (levelManager.getCurrentLevel() == 1) {
                 SwingUtilities.invokeLater(() -> pauseAndPlaySound(question.getVoice(), 450));

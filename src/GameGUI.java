@@ -16,7 +16,6 @@ public class GameGUI extends JFrame {
     private GameLogic gameLogic;
     private LevelManager levelManager;
     private Question question;
-    private boolean answerButtonPressed = false;
     private Color customColor1 = new Color(150, 255, 150);
     private Color customColor2 = new Color(255, 231, 151);
     private Color customColor3 = new Color(151, 207, 255);
@@ -38,7 +37,6 @@ public class GameGUI extends JFrame {
     }
 
     public void updateGUI(Question question) {
-        answerButtonPressed = false;
         this.question = question;
         answerButtons = new ArrayList<>();
         getContentPane().removeAll();
@@ -138,24 +136,20 @@ public class GameGUI extends JFrame {
     }
 
     public void displayCorrectAnswer(int incorrectButtonIndex, int correctButtonIndex) {
-        if (!answerButtonPressed && incorrectButtonIndex == -1) {
+        if (incorrectButtonIndex == -1) {
             if (correctButtonIndex >= 0 && correctButtonIndex < answerButtons.size()) {
-                answerButtonPressed = true;
                 answerButtons.get(correctButtonIndex).setBackground(Color.GREEN);
                 SwingUtilities.invokeLater(() -> {
                     gameLogic.playSound(null, 1);
                 });
             }
-        } else if (!answerButtonPressed){
-            if (incorrectButtonIndex >= 0 && incorrectButtonIndex < answerButtons.size()) {
-                answerButtonPressed = true;
+        } else if (incorrectButtonIndex >= 0 && incorrectButtonIndex < answerButtons.size()) {
                 answerButtons.get(incorrectButtonIndex).setBackground(Color.RED);
                 answerButtons.get(correctButtonIndex).setBackground(Color.GREEN);
                 SwingUtilities.invokeLater(() -> {
                     gameLogic.playSound(null, 2);
                 });
             }
-        }
         updateScore();
     }
 
